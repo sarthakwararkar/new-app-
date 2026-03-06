@@ -1,9 +1,7 @@
 fastapi
 uvicorn
-python-multipart==0.0.9
-requests==2.32.3
-beautifulsoup4==4.12.3
 pydantic
-groq
+beautifulsoup4
+requests
 python-dotenv
-sentence-transformers
+groq
