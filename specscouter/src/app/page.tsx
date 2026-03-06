@@ -36,8 +36,8 @@ export default function Home() {
       if (text) formData.append("text_description", text);
       if (file) formData.append("image", file);
 
-      // Using the backend API URL directly
-      const response = await fetch("http://localhost:8000/analyze-project", {
+      // Using relative path for Vercel compatibility
+      const response = await fetch("/api/analyze-project", {
         method: "POST",
         body: formData,
       });
