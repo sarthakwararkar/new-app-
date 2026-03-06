@@ -6,11 +6,28 @@ import VibeSearch from "@/components/VibeSearch";
 import UploadZone from "@/components/UploadZone";
 import ResultsSplitView from "@/components/ResultsSplitView";
 import { ProjectAnalysisResponse } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
+  const { user } = useAuth();
   const [showResults, setShowResults] = useState(false);
   const [analysisData, setAnalysisData] = useState<ProjectAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const saveSearchHistory = async (queryText: string) => {
+    if (!user) return;
+    try {
+      const title = queryText.length > 50 ? queryText.substring(0, 50) + "…" : queryText;
+      await supabase.from("search_history").insert({
+        user_id: user.id,
+        query_text: queryText,
+        title,
+      });
+    } catch (err) {
+      console.error("Failed to save search history:", err);
+    }
+  };
 
   const performAnalysis = async (text: string, file: File | null = null) => {
     setError(null);
@@ -32,6 +49,10 @@ export default function Home() {
       const data: ProjectAnalysisResponse = await response.json();
       setAnalysisData(data);
       setShowResults(true);
+
+      // Save search to history if user is logged in
+      const searchQuery = text || (file ? `Image: ${file.name}` : "Unknown search");
+      await saveSearchHistory(searchQuery);
     } catch (err: unknown) {
       console.error("Analysis failed:", err);
       setError(err instanceof Error ? err.message : "Failed to analyze project. Is the backend running?");
@@ -132,4 +153,3 @@ export default function Home() {
     </div>
   );
 }
-
