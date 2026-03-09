@@ -123,11 +123,19 @@ def extract_json_from_text(text: str) -> dict:
                 text = text[start_idx : i + 1]
                 break
     text = re.sub(r',\s*([\]}])', r'\1', text)
-    return json.loads(text)
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
 
 def repair_shopping_list(items: list) -> list:
+    if not isinstance(items, list):
+        return []
     repaired = []
     for item in items:
+        if not isinstance(item, dict):
+            continue
         clean: dict = {}
         for key, value in item.items():
             k = key.lower().replace(" ", "_")
@@ -360,6 +368,9 @@ async def analyze_project(
         raw = query_groq(prompt=user_prompt, system=BOM_SYSTEM_PROMPT)
         analysis_dict = extract_json_from_text(raw)
         
+        if not isinstance(analysis_dict, dict):
+            analysis_dict = {}
+            
         # Ensure all required fields exist to prevent FastAPI 500 Response Validation Error
         analysis_dict.setdefault("core_controller", "Not specified")
         analysis_dict.setdefault("power_needs", "Not specified")
