@@ -240,10 +240,10 @@ def _rank_results(
 # =============================================================
 # Vendor Scrapers
 # =============================================================
-def _search_robu(query: str, max_results: int = 8) -> List[VendorResult]:
+def _search_robu(query: str, max_results: int = 4) -> List[VendorResult]:
     try:
         url = f"https://robu.in/?s={query.replace(' ', '+')}&post_type=product"
-        res = requests.get(url, headers=HEADERS, timeout=8)
+        res = requests.get(url, headers=HEADERS, timeout=4)
         if res.status_code != 200: return []
         soup = BeautifulSoup(res.text, 'html.parser')
         out = []
@@ -264,10 +264,10 @@ def _search_robu(query: str, max_results: int = 8) -> List[VendorResult]:
         return out
     except: return []
 
-def _search_electronicscomp(query: str, max_results: int = 8) -> List[VendorResult]:
+def _search_electronicscomp(query: str, max_results: int = 4) -> List[VendorResult]:
     try:
         url = f"https://www.electronicscomp.com/index.php?route=product/search&search={requests.utils.quote(query)}"
-        res = requests.get(url, headers=HEADERS, timeout=8)
+        res = requests.get(url, headers=HEADERS, timeout=4)
         if res.status_code != 200: return []
         soup = BeautifulSoup(res.text, 'html.parser')
         out = []
@@ -289,10 +289,10 @@ def _search_electronicscomp(query: str, max_results: int = 8) -> List[VendorResu
         return out
     except: return []
 
-def _search_amazon(query: str, max_results: int = 8) -> List[VendorResult]:
+def _search_amazon(query: str, max_results: int = 4) -> List[VendorResult]:
     try:
         url = f"https://www.amazon.in/s?k={requests.utils.quote(query)}"
-        res = requests.get(url, headers=HEADERS, timeout=8)
+        res = requests.get(url, headers=HEADERS, timeout=4)
         if res.status_code != 200: return []
         soup = BeautifulSoup(res.text, 'html.parser')
         out = []
@@ -314,7 +314,7 @@ def _search_amazon(query: str, max_results: int = 8) -> List[VendorResult]:
     except: return []
 
 # Skipping heavy functions for now to keep index.py clean, or including simplified versions
-def spec_scouter_search(part_name: str, max_suggestions: int = 15, max_per_vendor: int = 8) -> dict:
+def spec_scouter_search(part_name: str, max_suggestions: int = 8, max_per_vendor: int = 4) -> dict:
     vendor_fns = [
         (_search_robu, part_name, max_per_vendor),
         (_search_electronicscomp, part_name, max_per_vendor),
@@ -366,8 +366,8 @@ async def analyze_project(
         analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
         
         # 2. Enrich shopping list with prices and vendors
-        # LIMIT items to enrich to avoid Vercel 10s timeout
-        MAX_ENRICH = 8
+        # LIMIT items to enrich to avoid Vercel 10s timeout (especially cold starts)
+        MAX_ENRICH = 4
         items_to_enrich = analysis_dict["shopping_list"][:MAX_ENRICH]
         remaining_items = analysis_dict["shopping_list"][MAX_ENRICH:]
 
@@ -375,7 +375,7 @@ async def analyze_project(
             part_name = item.get("part_name", "")
             if part_name:
                 try:
-                    # Set a very tight timeout for each part search (3s)
+                    # Set a very tight timeout for each part search (4s max)
                     data = spec_scouter_search(part_name)
                     item.update({
                         "estimated_price": data.get("price", "TBD"),
@@ -389,8 +389,8 @@ async def analyze_project(
                     item.update({"estimated_price": "Search Failed", "vendor": "Check Manual"})
             return item
 
-        # Use limited workers to avoid resource exhaustion on small serverless instances
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        # Use 3 workers (one for each vendor type essentially) to minimize context switching overhead
+        with ThreadPoolExecutor(max_workers=3) as pool:
             enriched_items = list(pool.map(_enrich, items_to_enrich))
         
         analysis_dict["shopping_list"] = enriched_items + remaining_items
