@@ -60,9 +60,9 @@ class VendorResult(BaseModel):
     score: Optional[float] = None
 
 class ShoppingListItem(BaseModel):
-    part_name: str
-    specifications: str
-    reason: str
+    part_name: Optional[str] = "Unknown Component"
+    specifications: Optional[str] = "Standard"
+    reason: Optional[str] = "Required for the project"
     is_safety_warning: bool = False
     quantity: Optional[int] = 1
     estimated_price: Optional[str] = None
@@ -72,9 +72,9 @@ class ShoppingListItem(BaseModel):
     all_vendors: Optional[List[VendorResult]] = None
 
 class ProjectAnalysisResponse(BaseModel):
-    core_controller: str
-    power_needs: str
-    safety_checking: str
+    core_controller: Optional[str] = "Not specified"
+    power_needs: Optional[str] = "Not specified"
+    safety_checking: Optional[str] = "Not specified"
     shopping_list: List[ShoppingListItem]
 
 class EnrichItemRequest(BaseModel):
@@ -371,13 +371,19 @@ async def analyze_project(
         if not isinstance(analysis_dict, dict):
             analysis_dict = {}
             
+        # Strip out any None values so setdefault can actually work
+        # (Otherwise if LLM returns "core_controller": null, then setdefault does nothing and Pydantic crashes)
+        analysis_dict = {k: v for k, v in analysis_dict.items() if v is not None}
+            
         # Ensure all required fields exist to prevent FastAPI 500 Response Validation Error
         analysis_dict.setdefault("core_controller", "Not specified")
         analysis_dict.setdefault("power_needs", "Not specified")
         analysis_dict.setdefault("safety_checking", "Not specified")
         analysis_dict.setdefault("shopping_list", [])
         
-        analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
+        analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict.get("shopping_list", []))
+        
+        print(f"DEBUG FINAL DICT: {analysis_dict}")
         
         # We no longer enrich here! Return the raw list instantly to prevent Vercel 10s Timeout.
         return analysis_dict
