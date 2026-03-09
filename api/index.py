@@ -370,11 +370,3 @@ async def analyze_project(
 @app.get("/health")
 async def health():
     return {"status": "ok", "environment": os.environ.get("VERCEL_ENV", "local")}
-
-@app.get("/")
-async def root():
-    return {
-        "message": "FastAPI is running, but this request should probably be handled by Next.js. Check your Vercel Framework settings.",
-        "path": "/",
-        "env": os.environ.get("VERCEL_ENV", "unknown")
-    }
