@@ -43,7 +43,9 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        const errorText = await response.text();
+        console.error("Server Error details:", errorText);
+        throw new Error(`Server returned ${response.status}: ${errorText}`);
       }
 
       const data: ProjectAnalysisResponse = await response.json();
