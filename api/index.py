@@ -77,6 +77,9 @@ class ProjectAnalysisResponse(BaseModel):
     safety_checking: str
     shopping_list: List[ShoppingListItem]
 
+class EnrichItemRequest(BaseModel):
+    part_name: str
+
 # =============================================================
 # GROQ LLM Helper
 # =============================================================
@@ -365,35 +368,7 @@ async def analyze_project(
         
         analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
         
-        # 2. Enrich shopping list with prices and vendors
-        # LIMIT items to enrich to avoid Vercel 10s timeout (especially cold starts)
-        MAX_ENRICH = 4
-        items_to_enrich = analysis_dict["shopping_list"][:MAX_ENRICH]
-        remaining_items = analysis_dict["shopping_list"][MAX_ENRICH:]
-
-        def _enrich(item: dict) -> dict:
-            part_name = item.get("part_name", "")
-            if part_name:
-                try:
-                    # Set a very tight timeout for each part search (4s max)
-                    data = spec_scouter_search(part_name)
-                    item.update({
-                        "estimated_price": data.get("price", "TBD"),
-                        "vendor": data.get("vendor", "Unknown"),
-                        "search_url": data.get("url"),
-                        "image_url": data.get("image_url"),
-                        "all_vendors": data.get("all_vendors", [])
-                    })
-                except Exception as e:
-                    print(f"Enrichment error for {part_name}: {e}")
-                    item.update({"estimated_price": "Search Failed", "vendor": "Check Manual"})
-            return item
-
-        # Use 3 workers (one for each vendor type essentially) to minimize context switching overhead
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            enriched_items = list(pool.map(_enrich, items_to_enrich))
-        
-        analysis_dict["shopping_list"] = enriched_items + remaining_items
+        # We no longer enrich here! Return the raw list instantly to prevent Vercel 10s Timeout.
         return analysis_dict
         
     except HTTPException as e:
@@ -401,6 +376,26 @@ async def analyze_project(
     except Exception as e:
         print(f"Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Analysis Error: {str(e)}")
+
+@app.post("/api/enrich-item")
+@app.post("/enrich-item")
+async def enrich_item(req: EnrichItemRequest):
+    """
+    Called individually by the frontend to prevent Vercel 10s Serverless Function timeouts.
+    """
+    try:
+        data = spec_scouter_search(req.part_name)
+        return {
+            "estimated_price": data.get("price", "TBD"),
+            "vendor": data.get("vendor", "Unknown"),
+            "search_url": data.get("url"),
+            "image_url": data.get("image_url"),
+            "all_vendors": data.get("all_vendors", [])
+        }
+    except Exception as e:
+        print(f"Enrichment error for {req.part_name}: {e}")
+        return {"estimated_price": "Search Failed", "vendor": "Check Manual"}
+
 
 @app.get("/api/health")
 @app.get("/health")

@@ -52,6 +52,27 @@ export default function Home() {
       setAnalysisData(data);
       setShowResults(true);
 
+      // Start background enrichment for each item to prevent Vercel 10s timeout
+      if (data.shopping_list) {
+        data.shopping_list.forEach((item, index) => {
+          fetch("/api/enrich-item", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ part_name: item.part_name }),
+          })
+            .then((res) => res.json())
+            .then((enrichData) => {
+              setAnalysisData((prev) => {
+                if (!prev) return prev;
+                const newList = [...prev.shopping_list];
+                newList[index] = { ...newList[index], ...enrichData };
+                return { ...prev, shopping_list: newList };
+              });
+            })
+            .catch((err) => console.error(`Error enriching ${item.part_name}:`, err));
+        });
+      }
+
       // Save search to history if user is logged in
       const searchQuery = text || (file ? `Image: ${file.name}` : "Unknown search");
       await saveSearchHistory(searchQuery);
