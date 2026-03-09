@@ -78,9 +78,9 @@ export default function Home() {
       await saveSearchHistory(searchQuery);
     } catch (err: unknown) {
       console.error("Analysis failed:", err);
-      let message = "Failed to analyze project. Is the backend running?";
+      let message = "Failed to analyze project. The LLM might have timed out on Vercel's free tier. Please try again.";
       if (err instanceof Error) {
-        message = err.message;
+        message = err.message.includes("504") ? "Vercel timeout: The AI took too long to generate the response. Please try a simpler prompt." : err.message;
       }
       setError(message);
     }
