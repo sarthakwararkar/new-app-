@@ -5,3 +5,4 @@ beautifulsoup4
 requests
 python-dotenv
 groq
+python-multipart
