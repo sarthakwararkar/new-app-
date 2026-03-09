@@ -341,6 +341,7 @@ BOM_SYSTEM_PROMPT = """You are an electronics engineer generating BOMs in JSON.
 Schema: {core_controller, power_needs, safety_checking, shopping_list: [{part_name, specifications, reason, is_safety_warning, quantity}]}"""
 
 @app.post("/api/analyze-project", response_model=ProjectAnalysisResponse)
+@app.post("/analyze-project", response_model=ProjectAnalysisResponse)
 async def analyze_project(
     text_description: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
@@ -366,5 +367,6 @@ async def analyze_project(
     return analysis_dict
 
 @app.get("/api/health")
+@app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "environment": os.environ.get("VERCEL_ENV", "local")}
