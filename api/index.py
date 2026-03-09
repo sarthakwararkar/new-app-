@@ -346,25 +346,56 @@ async def analyze_project(
     text_description: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
 ):
-    if not text_description and not image:
-        raise HTTPException(status_code=400, detail="Provide input.")
-    user_input = text_description or ""
-    user_prompt = f"Analyze: {user_input}"
-    raw = query_groq(prompt=user_prompt, system=BOM_SYSTEM_PROMPT)
-    analysis_dict = extract_json_from_text(raw)
-    analysis_dict.setdefault("shopping_list", [])
-    analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
-    
-    def _enrich(item: dict) -> dict:
-        part_name = item.get("part_name", "")
-        if part_name:
-            data = spec_scouter_search(part_name)
-            item.update({"estimated_price": data["price"], "vendor": data["vendor"], "search_url": data["url"], "image_url": data.get("image_url"), "all_vendors": data.get("all_vendors", [])})
-        return item
+    try:
+        if not text_description and not image:
+            raise HTTPException(status_code=400, detail="Provide input.")
+        
+        user_input = text_description or ""
+        user_prompt = f"Analyze: {user_input}"
+        
+        # 1. Query LLM (with timeout if possible, though SDK usually handles it)
+        raw = query_groq(prompt=user_prompt, system=BOM_SYSTEM_PROMPT)
+        analysis_dict = extract_json_from_text(raw)
+        
+        analysis_dict.setdefault("shopping_list", [])
+        analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
+        
+        # 2. Enrich shopping list with prices and vendors
+        # LIMIT items to enrich to avoid Vercel 10s timeout
+        MAX_ENRICH = 8
+        items_to_enrich = analysis_dict["shopping_list"][:MAX_ENRICH]
+        remaining_items = analysis_dict["shopping_list"][MAX_ENRICH:]
 
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        analysis_dict["shopping_list"] = list(pool.map(_enrich, analysis_dict["shopping_list"]))
-    return analysis_dict
+        def _enrich(item: dict) -> dict:
+            part_name = item.get("part_name", "")
+            if part_name:
+                try:
+                    # Set a very tight timeout for each part search (3s)
+                    data = spec_scouter_search(part_name)
+                    item.update({
+                        "estimated_price": data.get("price", "TBD"),
+                        "vendor": data.get("vendor", "Unknown"),
+                        "search_url": data.get("url"),
+                        "image_url": data.get("image_url"),
+                        "all_vendors": data.get("all_vendors", [])
+                    })
+                except Exception as e:
+                    print(f"Enrichment error for {part_name}: {e}")
+                    item.update({"estimated_price": "Search Failed", "vendor": "Check Manual"})
+            return item
+
+        # Use limited workers to avoid resource exhaustion on small serverless instances
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            enriched_items = list(pool.map(_enrich, items_to_enrich))
+        
+        analysis_dict["shopping_list"] = enriched_items + remaining_items
+        return analysis_dict
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Analysis Error: {str(e)}")
 
 @app.get("/api/health")
 @app.get("/health")

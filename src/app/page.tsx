@@ -55,7 +55,11 @@ export default function Home() {
       await saveSearchHistory(searchQuery);
     } catch (err: unknown) {
       console.error("Analysis failed:", err);
-      setError(err instanceof Error ? err.message : "Failed to analyze project. Is the backend running?");
+      let message = "Failed to analyze project. Is the backend running?";
+      if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
     }
   };
 
