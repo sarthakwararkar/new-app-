@@ -357,7 +357,12 @@ async def analyze_project(
         raw = query_groq(prompt=user_prompt, system=BOM_SYSTEM_PROMPT)
         analysis_dict = extract_json_from_text(raw)
         
+        # Ensure all required fields exist to prevent FastAPI 500 Response Validation Error
+        analysis_dict.setdefault("core_controller", "Not specified")
+        analysis_dict.setdefault("power_needs", "Not specified")
+        analysis_dict.setdefault("safety_checking", "Not specified")
         analysis_dict.setdefault("shopping_list", [])
+        
         analysis_dict["shopping_list"] = repair_shopping_list(analysis_dict["shopping_list"])
         
         # 2. Enrich shopping list with prices and vendors
