@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { History, FolderOpen, Cpu, Plus, Settings, LogIn, LogOut, User } from "lucide-react";
+import { History, FolderOpen, Cpu, Plus, Settings, LogIn, LogOut, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import AuthModal from "./AuthModal";
@@ -29,7 +29,12 @@ function getRelativeDate(dateStr: string): string {
     return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { user, loading: authLoading, signOut } = useAuth();
     const [activeId, setActiveId] = useState<string | null>(null);
     const [historyItems, setHistoryItems] = useState<SearchHistoryItem[]>([]);
@@ -84,13 +89,35 @@ export default function Sidebar() {
 
     return (
         <>
-            <div className="w-64 h-screen border-r border-border bg-card flex flex-col flex-shrink-0">
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
+                    onClick={onClose}
+                />
+            )}
+
+            <div className={`
+                fixed inset-y-0 left-0 z-50 w-[80vw] max-w-sm bg-card border-r border-border flex flex-col transition-transform duration-300 transform
+                lg:relative lg:translate-x-0 lg:z-10 lg:w-64
+                ${isOpen ? "translate-x-0" : "-translate-x-full"}
+            `}>
                 {/* Brand Header */}
-                <div className="p-4 flex items-center gap-3 border-b border-border">
-                    <div className="w-8 h-8 rounded-md bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
-                        <Cpu size={20} />
+                <div className="p-4 flex items-center justify-between border-b border-border">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-md bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                            <Cpu size={20} />
+                        </div>
+                        <h1 className="font-semibold text-lg tracking-tight">SpecScouter</h1>
                     </div>
-                    <h1 className="font-semibold text-lg tracking-tight">SpecScouter</h1>
+
+                    {/* Mobile Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="lg:hidden p-1 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
 
                 {/* New Project Button */}
@@ -142,8 +169,8 @@ export default function Sidebar() {
                                         key={item.id}
                                         onClick={() => setActiveId(item.id)}
                                         className={`relative px-3 py-2 text-sm text-left rounded-md transition-colors flex items-center gap-3 ${isActive
-                                                ? "text-foreground"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                            ? "text-foreground"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                             }`}
                                     >
                                         {isActive && (

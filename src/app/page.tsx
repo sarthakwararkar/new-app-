@@ -67,7 +67,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center">
-      <div className="relative z-10 w-full p-8 md:p-12 lg:p-16 flex flex-col items-center">
+      <div className="relative z-10 w-full p-4 md:p-12 lg:p-16 flex flex-col items-center">
         <motion.div
           layout
           className="w-full max-w-5xl mx-auto"
@@ -77,12 +77,12 @@ export default function Home() {
             layout
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            className="text-center mb-8 md:mb-12"
           >
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white">
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">
               Discover Components <span className="text-emerald-500">Intelligently</span>
             </h1>
-            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+            <p className="text-zinc-400 text-base md:text-lg max-w-2xl mx-auto px-4">
               Describe your project, drop a schematic, or vibe search. SpecScouter will find the exact parts you need, check live stock, and get you building faster.
             </p>
           </motion.div>

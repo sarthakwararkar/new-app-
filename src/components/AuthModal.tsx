@@ -77,7 +77,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+                        className="relative w-[95%] sm:w-full max-w-md mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header gradient bar */}

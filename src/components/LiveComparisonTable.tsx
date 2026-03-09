@@ -42,7 +42,7 @@ export default function LiveComparisonTable({ data }: LiveComparisonTableProps) 
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pb-12 px-2 md:px-0">
             {data.map((item, idx) => {
                 const status = getMockStatus(item.part_name);
 
@@ -59,7 +59,7 @@ export default function LiveComparisonTable({ data }: LiveComparisonTableProps) 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="group relative flex flex-col bg-card/40 backdrop-blur-xl border border-border/50 hover:border-emerald-500/30 rounded-[2rem] overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5"
+                        className="group relative flex flex-col bg-card/40 backdrop-blur-xl border border-border/50 hover:border-emerald-500/30 rounded-2xl md:rounded-[2rem] overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5"
                     >
                         {/* Status Bar */}
                         <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-b border-border/50">
@@ -116,8 +116,8 @@ export default function LiveComparisonTable({ data }: LiveComparisonTableProps) 
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className={`flex items-center justify-between p-3 rounded-2xl border transition-all duration-300 ${vIdx === 0
-                                                    ? "bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20"
-                                                    : "bg-muted/30 border-border/50 hover:bg-muted/50 hover:border-border"
+                                                ? "bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20"
+                                                : "bg-muted/30 border-border/50 hover:bg-muted/50 hover:border-border"
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">

@@ -1,7 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
+import MobileNav from "@/components/MobileNav";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -15,23 +18,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "SpecScouter - Hardware Discovery",
-  description: "AI-powered electronic component discovery and live pricing.",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} bg-black text-foreground`}>
+      <body className="bg-black text-foreground antialiased overflow-x-hidden">
         <ShaderAnimation />
         <AuthProvider>
-          <div className="relative z-10 flex h-screen overflow-hidden bg-transparent">
-            <Sidebar />
+          <div className="relative z-10 flex flex-col lg:flex-row h-screen overflow-hidden bg-transparent">
+            <MobileNav onMenuClick={() => setIsSidebarOpen(true)} />
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
             <main className="flex-1 overflow-y-auto">
               {children}
             </main>
