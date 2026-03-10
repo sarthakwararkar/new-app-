@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import VibeSearch from "@/components/VibeSearch";
 import UploadZone from "@/components/UploadZone";
@@ -15,7 +15,70 @@ export default function Home() {
   const [analysisData, setAnalysisData] = useState<ProjectAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const saveSearchHistory = async (queryText: string) => {
+  const enrichResults = (dataToEnrich: ProjectAnalysisResponse) => {
+    if (dataToEnrich.shopping_list) {
+      dataToEnrich.shopping_list.forEach((item, index) => {
+        if (item.all_vendors && item.all_vendors.length > 0) return; // Skip if already enriched
+        fetch("/api/enrich-item", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ part_name: item.part_name }),
+        })
+          .then((res) => res.json())
+          .then((enrichData) => {
+            setAnalysisData((prev) => {
+              if (!prev) return prev;
+              const newList = [...prev.shopping_list];
+              // Update item with enriched data
+              newList[index] = { ...newList[index], ...enrichData };
+
+              // Optional: Update the Supabase row with the latest fully enriched JSON here
+              // Doing it optimally would require the history row ID, which we may not have readily available.
+              // Just updating state is enough for now.
+
+              return { ...prev, shopping_list: newList };
+            });
+          })
+          .catch((err) => console.error(`Error enriching ${item.part_name}:`, err));
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleLoadHistory = async (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const historyId = customEvent.detail;
+
+      try {
+        const { data, error: dbError } = await supabase
+          .from('search_history')
+          .select('*')
+          .eq('id', historyId)
+          .single();
+
+        if (dbError) throw dbError;
+
+        if (data) {
+          if (data.results) {
+            setAnalysisData(data.results);
+            setShowResults(true);
+            setError(null);
+            enrichResults(data.results); // re-trigger enrichment for any items not previously enriched
+          } else {
+            // Fallback for old history without results
+            performAnalysis(data.query_text);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load history:", err);
+      }
+    };
+
+    window.addEventListener('load_history', handleLoadHistory);
+    return () => window.removeEventListener('load_history', handleLoadHistory);
+  }, []);
+
+  const saveSearchHistory = async (queryText: string, results: ProjectAnalysisResponse) => {
     if (!user) return;
     try {
       const title = queryText.length > 50 ? queryText.substring(0, 50) + "…" : queryText;
@@ -23,6 +86,7 @@ export default function Home() {
         user_id: user.id,
         query_text: queryText,
         title,
+        results
       });
     } catch (err) {
       console.error("Failed to save search history:", err);
@@ -53,29 +117,11 @@ export default function Home() {
       setShowResults(true);
 
       // Start background enrichment for each item to prevent Vercel 10s timeout
-      if (data.shopping_list) {
-        data.shopping_list.forEach((item, index) => {
-          fetch("/api/enrich-item", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ part_name: item.part_name }),
-          })
-            .then((res) => res.json())
-            .then((enrichData) => {
-              setAnalysisData((prev) => {
-                if (!prev) return prev;
-                const newList = [...prev.shopping_list];
-                newList[index] = { ...newList[index], ...enrichData };
-                return { ...prev, shopping_list: newList };
-              });
-            })
-            .catch((err) => console.error(`Error enriching ${item.part_name}:`, err));
-        });
-      }
+      enrichResults(data);
 
       // Save search to history if user is logged in
       const searchQuery = text || (file ? `Image: ${file.name}` : "Unknown search");
-      await saveSearchHistory(searchQuery);
+      await saveSearchHistory(searchQuery, data);
     } catch (err: unknown) {
       console.error("Analysis failed:", err);
       let message = "Failed to analyze project. The LLM might have timed out on Vercel's free tier. Please try again.";
