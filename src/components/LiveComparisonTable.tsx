@@ -10,7 +10,8 @@ interface LiveComparisonTableProps {
 
 export default function LiveComparisonTable({ data }: LiveComparisonTableProps) {
     // Helper to mock status
-    const getMockStatus = (itemName: string) => {
+    const getMockStatus = (itemName?: string) => {
+        if (!itemName) return "in-stock";
         const hash = itemName.length;
         if (hash % 3 === 0) return "low-stock";
         if (hash % 5 === 0) return "out-of-stock";
@@ -26,7 +27,8 @@ export default function LiveComparisonTable({ data }: LiveComparisonTableProps) 
     };
 
     // Helper to parse price for sorting
-    const parsePrice = (priceStr: string): number => {
+    const parsePrice = (priceStr?: string): number => {
+        if (!priceStr) return 0;
         return parseFloat(priceStr.replace(/[^\d.]/g, "")) || 0;
     };
 

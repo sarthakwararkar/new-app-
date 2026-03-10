@@ -193,12 +193,31 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                             size={16}
                                             className={isActive ? "text-emerald-500 flex-shrink-0" : "flex-shrink-0"}
                                         />
-                                        <div className="flex flex-col overflow-hidden">
+                                        <div className="flex flex-col flex-1 overflow-hidden pointer-events-none">
                                             <span className="truncate">{item.title}</span>
                                             <span className="text-[10px] text-muted-foreground leading-tight">
                                                 {getRelativeDate(item.created_at)}
                                             </span>
                                         </div>
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (!confirm("Delete this search?")) return;
+                                                const { error } = await supabase
+                                                    .from("search_history")
+                                                    .delete()
+                                                    .eq("id", item.id);
+                                                if (!error) {
+                                                    setHistoryItems(prev => prev.filter(h => h.id !== item.id));
+                                                    if (activeId === item.id) setActiveId(null);
+                                                }
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 hover:text-red-500 rounded transition-all ml-auto pointer-events-auto"
+                                        >
+                                            <X size={12} />
+                                        </button>
                                     </button>
                                 );
                             })}
